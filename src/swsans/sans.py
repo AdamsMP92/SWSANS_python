@@ -10,6 +10,7 @@ from numpy.typing import NDArray
 from swsans.models import SANSConfig
 
 Geometry = Literal["perpendicular", "parallel"]
+CurveSpacing = Literal["log", "linear"]
 MAGNETIC_SCATTERING_LENGTH = 2.91e8  # A^-1 m^-1
 
 
@@ -86,9 +87,10 @@ def sans_map(
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Calculate a square two-dimensional magnetic SANS detector map.
 
-    The returned intensity is in cm^-1 and both axes are in nm^-1. For the
-    perpendicular geometry they correspond to q_y and q_z; for the parallel
-    geometry they correspond to q_x and q_y.
+    The returned intensity is in cm^-1 and both axes are in nm^-1. The first
+    axis is horizontal and the second is vertical. They correspond to
+    ``(q_z, q_y)`` for the perpendicular geometry and ``(q_x, q_y)`` for the
+    parallel geometry.
     """
 
     axis = np.linspace(
@@ -98,8 +100,8 @@ def sans_map(
     )
     horizontal, vertical = np.meshgrid(axis, axis)
     q = np.hypot(horizontal, vertical)
-    sine = np.divide(horizontal, q, out=np.zeros_like(q), where=q != 0.0)
-    cosine = np.divide(vertical, q, out=np.ones_like(q), where=q != 0.0)
+    sine = np.divide(vertical, q, out=np.zeros_like(q), where=q != 0.0)
+    cosine = np.divide(horizontal, q, out=np.ones_like(q), where=q != 0.0)
     angular = _angular_factor(gamma, sine, cosine, geometry)
     central = _azimuthal_moment(gamma, geometry)
     angular = np.where(q == 0.0, central, angular)
@@ -113,12 +115,18 @@ def sans_intensity_curve(
     gamma: NDArray[np.float64],
     config: SANSConfig,
     geometry: Geometry,
+    spacing: CurveSpacing = "log",
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Return the 2-pi azimuthal average I(q) in cm^-1."""
 
-    q_min = min(config.q_max_per_nm / 10.0, 0.01 / config.radius_nm)
-    q_min = max(q_min, config.q_max_per_nm * 1.0e-5)
-    q = np.geomspace(q_min, config.q_max_per_nm, config.curve_points)
+    if spacing == "log":
+        q_min = min(config.q_max_per_nm / 10.0, 0.01 / config.radius_nm)
+        q_min = max(q_min, config.q_max_per_nm * 1.0e-5)
+        q = np.geomspace(q_min, config.q_max_per_nm, config.curve_points)
+    elif spacing == "linear":
+        q = np.linspace(0.0, config.q_max_per_nm, config.curve_points)
+    else:
+        raise ValueError(f"Unknown reciprocal-space spacing: {spacing}")
     intensity = (
         _prefactor(config)
         * sphere_form_factor(q * config.radius_nm)

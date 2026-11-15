@@ -8,11 +8,12 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import LogNorm
+from matplotlib.colors import LogNorm, Normalize
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 from swsans import (
     Anisotropy,
+    CriticalState,
     CriticalStates,
     HysteresisResult,
     InputValidationError,
@@ -20,6 +21,7 @@ from swsans import (
     SANSConfig,
     SimulationConfig,
     critical_states,
+    field_point_state,
     pair_distance_curves,
     sans_intensity_curve,
     sans_map,
@@ -66,6 +68,22 @@ PRESETS: dict[str, dict[str, str | float]] = {
         "field_max": 4.0,
     },
 }
+
+
+def _descending_zero_index(result: HysteresisResult) -> int:
+    turning_index = int(np.argmin(result.field_t))
+    return int(np.argmin(np.abs(result.field_t[: turning_index + 1])))
+
+
+def _field_point_choices(result: HysteresisResult) -> dict[str, str]:
+    total = result.field_t.size
+    choices: dict[str, str] = {}
+    for index, field in enumerate(result.field_t):
+        branch = field_point_state(result, index).name
+        choices[str(index)] = (
+            f"{index + 1:03d}/{total:03d} · {branch} · B = {field:+.4f} T"
+        )
+    return choices
 
 
 def _numeric_field(
@@ -293,7 +311,7 @@ results = ui.div(
             ui.tags.span("MAGNETIC SANS", class_="eyebrow"),
             ui.h2("Detector response"),
             ui.tags.p(
-                "Evaluate the selected hysteresis state for a dilute ensemble "
+                "Evaluate any calculated field point for a dilute ensemble "
                 "of uniformly magnetized spherical particles.",
                 class_="section-intro",
             ),
@@ -302,13 +320,9 @@ results = ui.div(
         ui.div(
             ui.input_select(
                 "sans_state",
-                "Hysteresis state",
-                {
-                    "saturation": "Saturation",
-                    "remanence": "Descending remanence",
-                    "coercive": "Descending coercive state",
-                },
-                selected="remanence",
+                "Calculated field point",
+                {"auto": "Descending zero-field point"},
+                selected="auto",
             ),
             ui.input_select(
                 "geometry",
@@ -318,6 +332,12 @@ results = ui.div(
                     "parallel": "B ∥ k₀",
                 },
                 selected="perpendicular",
+            ),
+            ui.input_select(
+                "reciprocal_scale",
+                "Reciprocal-space scaling",
+                {"log": "Logarithmic", "linear": "Linear"},
+                selected="log",
             ),
             _numeric_field(
                 "radius_nm",
@@ -455,7 +475,8 @@ documentation_panel = ui.div(
                 r"\frac{d\Sigma_{M,\perp}}{d\Omega}=C(q)\left[\Gamma_{xx}+"
                 r"\Gamma_{yy}\cos^2\theta+\Gamma_{zz}\sin^2\theta-"
                 r"2\Gamma_{yz}\sin\theta\cos\theta\right]",
-                "Here C(q) contains the spherical particle form factor.",
+                "Here qᵧ = q sin θ and q_z = q cos θ; the detector map uses "
+                "q_z horizontally and qᵧ vertically.",
             ),
             class_="docs-section",
         ),
@@ -466,7 +487,8 @@ documentation_panel = ui.div(
                 r"\frac{d\Sigma_{M,\parallel}}{d\Omega}=C(q)\left["
                 r"\Gamma_{xx}\sin^2\theta+\Gamma_{yy}\cos^2\theta+"
                 r"\Gamma_{zz}-2\Gamma_{xy}\sin\theta\cos\theta\right]",
-                "Both detector geometries are calculated from the same ensemble.",
+                "Here qₓ = q cos θ and qᵧ = q sin θ; the detector map uses "
+                "qₓ horizontally and qᵧ vertically.",
             ),
             class_="docs-section",
         ),
@@ -675,9 +697,26 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     def states() -> CriticalStates:
         return critical_states(_result())
 
+    @reactive.effect
+    def _update_sans_field_choices() -> None:
+        result = _result()
+        ui.update_select(
+            "sans_state",
+            choices=_field_point_choices(result),
+            selected=str(_descending_zero_index(result)),
+        )
+
     @reactive.calc
-    def selected_state():
-        return states().by_name(str(input.sans_state()))
+    def selected_state() -> tuple[int, CriticalState]:
+        result = _result()
+        raw_index = str(input.sans_state())
+        try:
+            index = int(raw_index)
+        except ValueError:
+            index = _descending_zero_index(result)
+        if index < 0 or index >= result.field_t.size:
+            index = _descending_zero_index(result)
+        return index, field_point_state(result, index)
 
     @output
     @render.ui
@@ -823,49 +862,71 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     @output
     @render.plot
     def sans_map_plot():
-        state = selected_state()
+        index, state = selected_state()
+        result = _result()
         config = _collect_sans_config()
         geometry = str(input.geometry())
+        scale = str(input.reciprocal_scale())
         x_axis, y_axis, intensity = sans_map(state.gamma, config, geometry)
         positive = intensity[intensity > 0.0]
         maximum = float(np.max(positive)) if positive.size else 1.0
         minimum = max(
             float(np.min(positive)) if positive.size else 1.0e-8, maximum * 1e-4
         )
+        is_logarithmic = scale == "log"
+        displayed_intensity = (
+            np.maximum(intensity, minimum) if is_logarithmic else intensity
+        )
+        norm = (
+            LogNorm(vmin=minimum, vmax=maximum)
+            if is_logarithmic
+            else Normalize(vmin=0.0, vmax=maximum)
+        )
         figure, axis = plt.subplots(figsize=(5.5, 4.7))
+        figure.subplots_adjust(left=0.17, right=0.84, bottom=0.15, top=0.88)
         image = axis.imshow(
-            np.maximum(intensity, minimum),
+            displayed_intensity,
             origin="lower",
             extent=[x_axis[0], x_axis[-1], y_axis[0], y_axis[-1]],
             cmap="magma",
-            norm=LogNorm(vmin=minimum, vmax=maximum),
+            norm=norm,
             interpolation="bilinear",
         )
         if geometry == "perpendicular":
-            axis.set_xlabel(r"$q_y$ [nm$^{-1}$]")
-            axis.set_ylabel(r"$q_z$ [nm$^{-1}$]")
+            axis.set_xlabel(r"$q_z$ [nm$^{-1}$]")
+            axis.set_ylabel(r"$q_y$ [nm$^{-1}$]", labelpad=8)
             title = r"$B\perp k_0$"
         else:
             axis.set_xlabel(r"$q_x$ [nm$^{-1}$]")
-            axis.set_ylabel(r"$q_y$ [nm$^{-1}$]")
+            axis.set_ylabel(r"$q_y$ [nm$^{-1}$]", labelpad=8)
             title = r"$B\parallel k_0$"
-        axis.set_title(f"{state.name.capitalize()} · {title}", fontsize=11)
+        axis.set_title(
+            f"Point {index + 1}/{result.field_t.size} · "
+            f"B = {state.field_t:+.4f} T · {title}",
+            fontsize=10.5,
+        )
         axis.set_aspect("equal")
         colorbar = figure.colorbar(image, ax=axis, fraction=0.047, pad=0.04)
         colorbar.set_label(r"$d\Sigma_M/d\Omega$ [cm$^{-1}$]")
-        figure.tight_layout()
         return figure
 
     @output
     @render.plot
     def sans_curves_plot():
-        state = selected_state()
+        _, state = selected_state()
         config = _collect_sans_config()
         geometry = str(input.geometry())
-        q, intensity = sans_intensity_curve(state.gamma, config, geometry)
+        scale = str(input.reciprocal_scale())
+        spacing = "linear" if scale == "linear" else "log"
+        q, intensity = sans_intensity_curve(
+            state.gamma,
+            config,
+            geometry,
+            spacing=spacing,
+        )
         r, pair, correlation = pair_distance_curves(state.gamma, config, geometry)
         figure, axes = plt.subplots(3, 1, figsize=(6.2, 5.0))
-        axes[0].loglog(q, intensity, color="#6656d9", linewidth=2.0)
+        axes[0].plot(q, intensity, color="#6656d9", linewidth=2.0)
         axes[0].set_ylabel(r"$I(q)$ [cm$^{-1}$]")
         axes[1].plot(r, pair, color="#17a7b5", linewidth=2.0)
         axes[1].set_ylabel(r"$p(r)$ [nm$^{-2}$]")
@@ -877,8 +938,11 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             _style_axes(axis)
         for axis in axes[1:]:
             axis.ticklabel_format(axis="y", style="sci", scilimits=(-2, 3))
-        axes[0].set_xscale("log")
-        axes[0].set_yscale("log")
+        if scale == "log":
+            axes[0].set_xscale("log")
+            axes[0].set_yscale("log")
+        else:
+            axes[0].set_xlim(0.0, config.q_max_per_nm)
         figure.tight_layout()
         return figure
 

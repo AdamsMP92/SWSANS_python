@@ -10,7 +10,7 @@ from swsans.models import (
     SANSConfig,
     SimulationConfig,
 )
-from swsans.observables import critical_states
+from swsans.observables import critical_states, field_point_state
 from swsans.sans import (
     pair_distance_curves,
     sans_intensity_curve,
@@ -29,6 +29,7 @@ __all__ = [
     "SANSConfig",
     "SimulationConfig",
     "critical_states",
+    "field_point_state",
     "field_sweep",
     "pair_distance_curves",
     "sans_intensity_curve",

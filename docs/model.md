@@ -103,6 +103,10 @@ For `B` perpendicular to the incident neutron beam,
 -2\Gamma_{yz}\sin\theta\cos\theta\right).
 ```
 
+The detector-plane convention is
+`q = (0, q_y, q_z) = q(0, sin(theta), cos(theta))`. The two-dimensional map
+therefore displays `q_z` horizontally and `q_y` vertically.
+
 For `B` parallel to the incident neutron beam,
 
 ```math
@@ -110,6 +114,10 @@ For `B` parallel to the incident neutron beam,
 \left(\Gamma_{xx}\sin^2\theta+\Gamma_{yy}\cos^2\theta
 +\Gamma_{zz}-2\Gamma_{xy}\sin\theta\cos\theta\right).
 ```
+
+Here the convention is
+`q = (q_x, q_y, 0) = q(cos(theta), sin(theta), 0)`, with `q_x` horizontal and
+`q_y` vertical on the detector map.
 
 The code also evaluates the analytic azimuthal averages and the spherical
 particle expressions for `p(r)` and `c(r) = p(r) / r^2`.

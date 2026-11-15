@@ -128,7 +128,7 @@ class HysteresisResult:
 
 @dataclass(frozen=True, slots=True)
 class CriticalState:
-    """Interpolated ensemble state at a physically relevant field value."""
+    """Ensemble state at a sampled or interpolated field value."""
 
     name: str
     field_t: float

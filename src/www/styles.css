@@ -323,7 +323,8 @@ a {
   min-width: 0;
 }
 
-.control-card .shiny-input-container {
+.control-card .shiny-input-container,
+.sans-controls .shiny-input-container {
   width: 100%;
   max-width: 100%;
 }
@@ -585,7 +586,7 @@ a {
 }
 
 .sans-controls {
-  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 20px 0 8px;
   padding: 16px;
   border-radius: 14px;

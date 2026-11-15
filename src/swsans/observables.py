@@ -5,7 +5,32 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from swsans.models import CriticalState, CriticalStates, HysteresisResult
+from swsans.models import (
+    CriticalState,
+    CriticalStates,
+    HysteresisResult,
+    InputValidationError,
+)
+
+
+def field_point_state(result: HysteresisResult, index: int) -> CriticalState:
+    """Return one sampled hysteresis state with an unambiguous branch name."""
+
+    if index < 0 or index >= result.field_t.size:
+        raise InputValidationError("The selected field-point index is out of range.")
+    turning_index = int(np.argmin(result.field_t))
+    if index < turning_index:
+        name = "descending branch"
+    elif index == turning_index:
+        name = "turning point"
+    else:
+        name = "ascending branch"
+    return CriticalState(
+        name=name,
+        field_t=float(result.field_t[index]),
+        mean_m=np.array(result.mean_m[index], dtype=np.float64, copy=True),
+        gamma=np.array(result.gamma[index], dtype=np.float64, copy=True),
+    )
 
 
 def _crossing(

@@ -1,11 +1,13 @@
 import numpy as np
+import pytest
 
 from swsans.models import (
     ConvergenceDiagnostics,
     HysteresisResult,
+    InputValidationError,
     SimulationConfig,
 )
-from swsans.observables import critical_states
+from swsans.observables import critical_states, field_point_state
 from swsans.simulation import field_sweep
 
 
@@ -33,3 +35,13 @@ def test_critical_states_interpolate_descending_branch() -> None:
     assert states.coercive.field_t == -0.5
     assert states.remanence.gamma[0, 1] == 0.04
     assert states.remanence.gamma[1, 2] == 0.01
+
+    assert field_point_state(result, 0).name == "descending branch"
+    assert field_point_state(result, 4).name == "turning point"
+    ascending = field_point_state(result, 5)
+    assert ascending.name == "ascending branch"
+    assert ascending.field_t == -1.0
+    np.testing.assert_array_equal(ascending.gamma, result.gamma[5])
+
+    with pytest.raises(InputValidationError, match="out of range"):
+        field_point_state(result, 9)
