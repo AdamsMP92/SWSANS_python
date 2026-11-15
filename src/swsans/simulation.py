@@ -40,6 +40,8 @@ def _step_euler(
         config.anisotropy,
         config.k1_t,
         config.k2_t,
+        cubic_k1_t=config.cubic_k1_t,
+        cubic_k2_t=config.cubic_k2_t,
     )
     rhs = landau_lifshitz_rhs(
         magnetization,
@@ -65,6 +67,8 @@ def _step_heun(
         config.anisotropy,
         config.k1_t,
         config.k2_t,
+        cubic_k1_t=config.cubic_k1_t,
+        cubic_k2_t=config.cubic_k2_t,
     )
     rhs_0 = landau_lifshitz_rhs(
         magnetization,
@@ -80,6 +84,8 @@ def _step_heun(
         config.anisotropy,
         config.k1_t,
         config.k2_t,
+        cubic_k1_t=config.cubic_k1_t,
+        cubic_k2_t=config.cubic_k2_t,
     )
     rhs_1 = landau_lifshitz_rhs(
         predictor,

@@ -35,6 +35,19 @@ and the cubic energy is
 +K_{\mathrm{c}2}m_x^2m_y^2m_z^2.
 ```
 
+The mixed model adds both contributions in one local particle frame,
+
+```math
+\omega_{\mathrm{ani,mixed}}
+=\omega_{\mathrm{ani,u}}+\omega_{\mathrm{ani,c}},
+\qquad \mathbf e_{\mathrm{u}}\parallel[001]_{\mathrm{c}}.
+```
+
+Thus the uniaxial axis is aligned with the cubic `[001]` axis for every
+particle. This first mixed model does not yet describe an arbitrary relative
+orientation between the uniaxial and cubic frames or a population containing
+separate purely uniaxial and purely cubic particles.
+
 The anisotropy field is obtained directly from the energy gradient,
 
 ```math
@@ -42,9 +55,12 @@ The anisotropy field is obtained directly from the energy gradient,
 \frac{\partial\omega_{\mathrm{ani}}}{\partial\mathbf m}.
 ```
 
-The user-facing constants are `k_i = 2 K_i / M_0` in tesla. Random particle
-orientations are produced from a three-dimensional Sobol sequence and a
-uniform `z-y-z` Euler-angle construction.
+The user-facing constants are `k_i = 2 K_i / M_0` in tesla. In the Python API,
+`k1_t` and `k2_t` retain their original meaning for pure symmetry modes and
+describe the uniaxial contribution in mixed mode. The keyword-only
+`cubic_k1_t` and `cubic_k2_t` parameters add the cubic contribution in mixed
+mode. Random particle orientations are produced from a three-dimensional
+Sobol sequence and a uniform `z-y-z` Euler-angle construction.
 
 ## Landau–Lifshitz relaxation
 

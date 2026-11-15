@@ -370,6 +370,17 @@ a {
   line-height: 1.35;
 }
 
+.mixed-note {
+  margin: 2px 0 13px;
+  padding: 11px 13px;
+  border: 1px solid rgba(102, 86, 217, 0.18);
+  border-radius: 10px;
+  background: rgba(102, 86, 217, 0.06);
+  color: var(--ink-soft);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
 .panel-divider {
   height: 1px;
   margin: 18px 0;

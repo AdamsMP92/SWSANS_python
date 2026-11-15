@@ -27,6 +27,10 @@ graphical interface.
 6. **Remanent cross-correlation correction:** the MATLAB assignment
    `Gxy_rem = Gyz_rem` is treated as a transcription error. Python retains and
    interpolates `Gamma_xy` independently.
+7. **Mixed anisotropy extension:** Python can add uniaxial and cubic energy
+   terms in a shared local particle frame, with the uniaxial axis aligned to
+   cubic `[001]`. The original pure modes and their parameter meanings remain
+   unchanged.
 
 SciPy and MATLAB may generate different Sobol direction numbers. Stored
 orientation arrays are therefore the preferred basis for exact cross-language
