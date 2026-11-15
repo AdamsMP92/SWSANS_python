@@ -168,7 +168,7 @@ controls = ui.div(
             minimum=0.01,
             note="Sweep: +Bmax → −Bmax → +Bmax",
         ),
-        class_="field-grid",
+        class_="field-grid field-grid-one",
     ),
     ui.div(class_="panel-divider"),
     ui.div(
@@ -194,7 +194,7 @@ controls = ui.div(
                 minimum=5,
                 note="Odd values; 4m + 1 includes both zero fields",
             ),
-            class_="field-grid field-grid-two",
+            class_="field-grid field-grid-one",
         ),
     ),
     ui.accordion(
@@ -250,7 +250,7 @@ controls = ui.div(
                     minimum=100,
                     note="Prevents unbounded relaxation loops",
                 ),
-                class_="advanced-grid",
+                class_="advanced-grid field-grid-one",
             ),
         ),
         open=False,
