@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 import numpy as np
@@ -22,6 +22,7 @@ class Anisotropy(StrEnum):
 
     UNIAXIAL = "uniaxial"
     CUBIC = "cubic"
+    MIXED = "mixed"
 
 
 class Integrator(StrEnum):
@@ -37,13 +38,18 @@ class SimulationConfig:
 
     ``k1_t`` and ``k2_t`` are the reduced anisotropy constants
     :math:`k_i=2K_i/M_0`, expressed in tesla, following the associated paper.
-    The time variables are reduced numerical parameters used to relax each
-    field point to a static state.
+    They describe the selected pure symmetry, or the uniaxial contribution in
+    mixed mode. ``cubic_k1_t`` and ``cubic_k2_t`` add the cubic contribution in
+    mixed mode. They are keyword-only so the original positional API remains
+    unchanged. The time variables are reduced numerical parameters used to
+    relax each field point to a static state.
     """
 
     anisotropy: Anisotropy = Anisotropy.UNIAXIAL
     k1_t: float = 1.0
     k2_t: float = 0.0
+    cubic_k1_t: float = field(default=0.0, kw_only=True)
+    cubic_k2_t: float = field(default=0.0, kw_only=True)
     field_max_t: float = 2.0
     n_orientations: int = 256
     n_field_points: int = 101
@@ -61,7 +67,13 @@ class SimulationConfig:
             object.__setattr__(self, "anisotropy", Anisotropy(self.anisotropy))
         if not isinstance(self.integrator, Integrator):
             object.__setattr__(self, "integrator", Integrator(self.integrator))
-        if not np.isfinite(self.k1_t) or not np.isfinite(self.k2_t):
+        anisotropy_constants = (
+            self.k1_t,
+            self.k2_t,
+            self.cubic_k1_t,
+            self.cubic_k2_t,
+        )
+        if not all(np.isfinite(value) for value in anisotropy_constants):
             raise InputValidationError("Anisotropy constants must be finite.")
         if not np.isfinite(self.field_max_t) or self.field_max_t <= 0.0:
             raise InputValidationError("The maximum field must be positive.")

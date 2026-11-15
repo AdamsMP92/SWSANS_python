@@ -14,7 +14,7 @@ functions.
 
 The current beta includes:
 
-- uniaxial and cubic magnetocrystalline anisotropy;
+- uniaxial, cubic, and additive aligned uniaxial–cubic anisotropy;
 - deterministic low-discrepancy Sobol orientation sampling;
 - projected Euler and projected Heun Landau–Lifshitz relaxation;
 - complete triangular field cycles and convergence diagnostics;
@@ -76,6 +76,27 @@ print(abs(states.coercive.field_t))
 `k1_t` and `k2_t` are the reduced anisotropy constants
 `k_i = 2 K_i / M_0` in tesla. The field sweep starts at `+Bmax`, descends to
 `-Bmax`, and returns to `+Bmax`.
+
+For an additive uniaxial–cubic model, select `Anisotropy.MIXED`. The existing
+`k1_t` and `k2_t` parameters then describe the uniaxial contribution, while
+the keyword-only `cubic_k1_t` and `cubic_k2_t` parameters describe the cubic
+contribution:
+
+```python
+from swsans import Anisotropy, SimulationConfig
+
+mixed = SimulationConfig(
+    anisotropy=Anisotropy.MIXED,
+    k1_t=0.8,
+    k2_t=0.0,
+    cubic_k1_t=-0.2,
+    cubic_k2_t=0.0,
+)
+```
+
+Both terms use the same local particle frame, with the uniaxial axis aligned
+with the cubic `[001]` axis. Setting either pair of constants to zero recovers
+the corresponding existing pure model.
 
 ## Numerical design
 

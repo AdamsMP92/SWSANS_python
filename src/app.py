@@ -33,38 +33,50 @@ APP_DIR = Path(__file__).resolve().parent
 PRESETS: dict[str, dict[str, str | float]] = {
     "uniaxial_axis": {
         "anisotropy": "uniaxial",
-        "k1": 1.0,
-        "k2": 0.0,
+        "ku1": 1.0,
+        "ku2": 0.0,
+        "kc1": 0.0,
+        "kc2": 0.0,
         "field_max": 2.0,
     },
     "uniaxial_plane": {
         "anisotropy": "uniaxial",
-        "k1": -1.0,
-        "k2": 0.0,
+        "ku1": -1.0,
+        "ku2": 0.0,
+        "kc1": 0.0,
+        "kc2": 0.0,
         "field_max": 2.0,
     },
     "uniaxial_cone": {
         "anisotropy": "uniaxial",
-        "k1": -0.5,
-        "k2": 0.5,
+        "ku1": -0.5,
+        "ku2": 0.5,
+        "kc1": 0.0,
+        "kc2": 0.0,
         "field_max": 2.0,
     },
     "cubic_100": {
         "anisotropy": "cubic",
-        "k1": 1.0,
-        "k2": 0.0,
+        "ku1": 0.0,
+        "ku2": 0.0,
+        "kc1": 1.0,
+        "kc2": 0.0,
         "field_max": 2.0,
     },
     "cubic_111": {
         "anisotropy": "cubic",
-        "k1": -1.0,
-        "k2": 0.0,
+        "ku1": 0.0,
+        "ku2": 0.0,
+        "kc1": -1.0,
+        "kc2": 0.0,
         "field_max": 2.0,
     },
     "cubic_110": {
         "anisotropy": "cubic",
-        "k1": -1.0,
-        "k2": 9.0,
+        "ku1": 0.0,
+        "ku2": 0.0,
+        "kc1": -1.0,
+        "kc2": 9.0,
         "field_max": 4.0,
     },
 }
@@ -135,8 +147,8 @@ controls = ui.div(
         ui.tags.span("ENSEMBLE MODEL", class_="eyebrow"),
         ui.h2("Simulation inputs"),
         ui.tags.p(
-            "Choose an anisotropy symmetry and relax a random ensemble along "
-            "a complete field cycle.",
+            "Choose uniaxial, cubic, or additive mixed anisotropy and relax a "
+            "random ensemble along a complete field cycle.",
             class_="section-intro",
         ),
         class_="panel-heading",
@@ -158,26 +170,64 @@ controls = ui.div(
         ui.input_select(
             "anisotropy",
             "Anisotropy symmetry",
-            {"uniaxial": "Uniaxial", "cubic": "Cubic"},
+            {
+                "uniaxial": "Uniaxial",
+                "cubic": "Cubic",
+                "mixed": "Uniaxial + cubic · aligned [001]",
+            },
             selected="uniaxial",
         ),
         class_="field-grid field-grid-one",
     ),
+    ui.panel_conditional(
+        "input.anisotropy !== 'cubic'",
+        ui.div(
+            _numeric_field(
+                "ku1",
+                "Uniaxial constant kᵤ₁ [T]",
+                1.0,
+                step=0.1,
+                note="kᵤ₁ = 2Kᵤ₁/M₀",
+            ),
+            _numeric_field(
+                "ku2",
+                "Uniaxial constant kᵤ₂ [T]",
+                0.0,
+                step=0.1,
+                note="kᵤ₂ = 2Kᵤ₂/M₀",
+            ),
+            class_="field-grid field-grid-one",
+        ),
+    ),
+    ui.panel_conditional(
+        "input.anisotropy !== 'uniaxial'",
+        ui.div(
+            _numeric_field(
+                "kc1",
+                "Cubic constant k꜀₁ [T]",
+                0.0,
+                step=0.1,
+                note="k꜀₁ = 2K꜀₁/M₀",
+            ),
+            _numeric_field(
+                "kc2",
+                "Cubic constant k꜀₂ [T]",
+                0.0,
+                step=0.1,
+                note="k꜀₂ = 2K꜀₂/M₀",
+            ),
+            class_="field-grid field-grid-one",
+        ),
+    ),
+    ui.panel_conditional(
+        "input.anisotropy === 'mixed'",
+        ui.tags.p(
+            "The uniaxial z axis and cubic [001] axis share the same local "
+            "particle frame. Their anisotropy energies are added.",
+            class_="mixed-note",
+        ),
+    ),
     ui.div(
-        _numeric_field(
-            "k1",
-            "First reduced constant k₁ [T]",
-            1.0,
-            step=0.1,
-            note="k₁ = 2K₁/M₀",
-        ),
-        _numeric_field(
-            "k2",
-            "Second reduced constant k₂ [T]",
-            0.0,
-            step=0.1,
-            note="k₂ = 2K₂/M₀",
-        ),
         _numeric_field(
             "field_max",
             "Maximum applied field [T]",
@@ -426,10 +476,11 @@ documentation_panel = ui.div(
         ui.tags.span("MODEL & DOCUMENTATION", class_="eyebrow"),
         ui.h2("From a random macrospin ensemble to magnetic SANS"),
         ui.tags.p(
-            "The implementation follows the Stoner–Wohlfarth and "
-            "Landau–Lifshitz model used in the associated IUCrJ article. "
-            "The polarized extension follows the NuMagSANS convention. "
-            "The equations below define the conventions used by the code.",
+            "The pure uniaxial and cubic implementations follow the "
+            "Stoner–Wohlfarth and Landau–Lifshitz model used in the associated "
+            "IUCrJ article. The mixed mode adds their energies in one aligned "
+            "particle frame. The polarized extension follows the NuMagSANS "
+            "convention. The equations below define the code's conventions.",
             class_="docs-lead",
         ),
         class_="docs-hero",
@@ -458,6 +509,12 @@ documentation_panel = ui.div(
                 r"\omega_{\mathrm{c}}=K_{\mathrm{c}1}(m_x^2m_y^2+"
                 r"m_x^2m_z^2+m_y^2m_z^2)+K_{\mathrm{c}2}m_x^2m_y^2m_z^2",
                 "Cubic anisotropy in the particle frame.",
+            ),
+            _equation(
+                r"\omega_{\mathrm{mixed}}=\omega_{\mathrm{u}}+"
+                r"\omega_{\mathrm{c}},\qquad z_{\mathrm{u}}\parallel[001]"
+                r"_{\mathrm{c}}",
+                "Additive mixed mode with a shared, aligned particle frame.",
             ),
             class_="docs-section",
         ),
@@ -694,15 +751,29 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
     def _apply_preset() -> None:
         preset = PRESETS[str(input.preset())]
         ui.update_select("anisotropy", selected=str(preset["anisotropy"]))
-        ui.update_numeric("k1", value=float(preset["k1"]))
-        ui.update_numeric("k2", value=float(preset["k2"]))
+        ui.update_numeric("ku1", value=float(preset["ku1"]))
+        ui.update_numeric("ku2", value=float(preset["ku2"]))
+        ui.update_numeric("kc1", value=float(preset["kc1"]))
+        ui.update_numeric("kc2", value=float(preset["kc2"]))
         ui.update_numeric("field_max", value=float(preset["field_max"]))
 
     def _collect_config() -> SimulationConfig:
+        anisotropy = Anisotropy(str(input.anisotropy()))
+        if anisotropy is Anisotropy.CUBIC:
+            k1_t = float(input.kc1())
+            k2_t = float(input.kc2())
+        else:
+            k1_t = float(input.ku1())
+            k2_t = float(input.ku2())
+
+        cubic_k1_t = float(input.kc1()) if anisotropy is Anisotropy.MIXED else 0.0
+        cubic_k2_t = float(input.kc2()) if anisotropy is Anisotropy.MIXED else 0.0
         return SimulationConfig(
-            anisotropy=Anisotropy(str(input.anisotropy())),
-            k1_t=float(input.k1()),
-            k2_t=float(input.k2()),
+            anisotropy=anisotropy,
+            k1_t=k1_t,
+            k2_t=k2_t,
+            cubic_k1_t=cubic_k1_t,
+            cubic_k2_t=cubic_k2_t,
             field_max_t=float(input.field_max()),
             n_orientations=int(input.orientation_count()),
             n_field_points=int(input.field_points()),
