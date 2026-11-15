@@ -12,6 +12,7 @@ from swsans.models import (
 )
 from swsans.observables import critical_states, field_point_state
 from swsans.sans import (
+    CrossSection,
     pair_distance_curves,
     sans_intensity_curve,
     sans_map,
@@ -23,6 +24,7 @@ __all__ = [
     "Anisotropy",
     "CriticalState",
     "CriticalStates",
+    "CrossSection",
     "HysteresisResult",
     "InputValidationError",
     "Integrator",

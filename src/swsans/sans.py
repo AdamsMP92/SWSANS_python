@@ -11,6 +11,7 @@ from swsans.models import SANSConfig
 
 Geometry = Literal["perpendicular", "parallel"]
 CurveSpacing = Literal["log", "linear"]
+CrossSection = Literal["unpolarized", "spin_flip"]
 MAGNETIC_SCATTERING_LENGTH = 2.91e8  # A^-1 m^-1
 
 
@@ -48,42 +49,71 @@ def _angular_factor(
     sine: NDArray[np.float64],
     cosine: NDArray[np.float64],
     geometry: Geometry,
+    cross_section: CrossSection,
 ) -> NDArray[np.float64]:
-    if geometry == "perpendicular":
-        return np.asarray(
-            (
+    if cross_section == "unpolarized":
+        if geometry == "perpendicular":
+            angular = (
                 gamma[0, 0]
                 + gamma[1, 1] * cosine**2
                 + gamma[2, 2] * sine**2
                 - 2.0 * gamma[1, 2] * sine * cosine
-            ),
-            dtype=np.float64,
-        )
-    if geometry == "parallel":
-        return np.asarray(
-            (
+            )
+        elif geometry == "parallel":
+            angular = (
                 gamma[0, 0] * sine**2
                 + gamma[1, 1] * cosine**2
                 + gamma[2, 2]
                 - 2.0 * gamma[0, 1] * sine * cosine
-            ),
-            dtype=np.float64,
-        )
-    raise ValueError(f"Unknown scattering geometry: {geometry}")
+            )
+        else:
+            raise ValueError(f"Unknown scattering geometry: {geometry}")
+    elif cross_section == "spin_flip":
+        if geometry == "perpendicular":
+            angular = (
+                gamma[0, 0]
+                + gamma[1, 1] * cosine**4
+                + gamma[2, 2] * sine**2 * cosine**2
+                - 2.0 * gamma[1, 2] * sine * cosine**3
+            )
+        elif geometry == "parallel":
+            angular = (
+                gamma[0, 0] * sine**2
+                + gamma[1, 1] * cosine**2
+                - 2.0 * gamma[0, 1] * sine * cosine
+            )
+        else:
+            raise ValueError(f"Unknown scattering geometry: {geometry}")
+    else:
+        raise ValueError(f"Unknown SANS cross section: {cross_section}")
+    return np.asarray(angular, dtype=np.float64)
 
 
-def _azimuthal_moment(gamma: NDArray[np.float64], geometry: Geometry) -> float:
-    if geometry == "perpendicular":
-        return float(gamma[0, 0] + 0.5 * gamma[1, 1] + 0.5 * gamma[2, 2])
-    if geometry == "parallel":
-        return float(0.5 * gamma[0, 0] + 0.5 * gamma[1, 1] + gamma[2, 2])
-    raise ValueError(f"Unknown scattering geometry: {geometry}")
+def _azimuthal_moment(
+    gamma: NDArray[np.float64],
+    geometry: Geometry,
+    cross_section: CrossSection,
+) -> float:
+    if cross_section == "unpolarized":
+        if geometry == "perpendicular":
+            return float(gamma[0, 0] + 0.5 * gamma[1, 1] + 0.5 * gamma[2, 2])
+        if geometry == "parallel":
+            return float(0.5 * gamma[0, 0] + 0.5 * gamma[1, 1] + gamma[2, 2])
+        raise ValueError(f"Unknown scattering geometry: {geometry}")
+    if cross_section == "spin_flip":
+        if geometry == "perpendicular":
+            return float(gamma[0, 0] + 3.0 / 8.0 * gamma[1, 1] + gamma[2, 2] / 8.0)
+        if geometry == "parallel":
+            return float(0.5 * gamma[0, 0] + 0.5 * gamma[1, 1])
+        raise ValueError(f"Unknown scattering geometry: {geometry}")
+    raise ValueError(f"Unknown SANS cross section: {cross_section}")
 
 
 def sans_map(
     gamma: NDArray[np.float64],
     config: SANSConfig,
     geometry: Geometry,
+    cross_section: CrossSection = "unpolarized",
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Calculate a square two-dimensional magnetic SANS detector map.
 
@@ -102,8 +132,8 @@ def sans_map(
     q = np.hypot(horizontal, vertical)
     sine = np.divide(vertical, q, out=np.zeros_like(q), where=q != 0.0)
     cosine = np.divide(horizontal, q, out=np.ones_like(q), where=q != 0.0)
-    angular = _angular_factor(gamma, sine, cosine, geometry)
-    central = _azimuthal_moment(gamma, geometry)
+    angular = _angular_factor(gamma, sine, cosine, geometry, cross_section)
+    central = _azimuthal_moment(gamma, geometry, cross_section)
     angular = np.where(q == 0.0, central, angular)
     intensity_per_m = (
         _prefactor(config) * sphere_form_factor(q * config.radius_nm) * angular
@@ -116,6 +146,7 @@ def sans_intensity_curve(
     config: SANSConfig,
     geometry: Geometry,
     spacing: CurveSpacing = "log",
+    cross_section: CrossSection = "unpolarized",
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Return the 2-pi azimuthal average I(q) in cm^-1."""
 
@@ -130,7 +161,7 @@ def sans_intensity_curve(
     intensity = (
         _prefactor(config)
         * sphere_form_factor(q * config.radius_nm)
-        * _azimuthal_moment(gamma, geometry)
+        * _azimuthal_moment(gamma, geometry, cross_section)
         / 100.0
     )
     return q, np.maximum(intensity, 0.0)
@@ -140,6 +171,7 @@ def pair_distance_curves(
     gamma: NDArray[np.float64],
     config: SANSConfig,
     geometry: Geometry,
+    cross_section: CrossSection = "unpolarized",
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Return r, p(r), and c(r)=p(r)/r^2 in nm-based units."""
 
@@ -156,7 +188,7 @@ def pair_distance_curves(
         / volume_m3
         * np.pi
         / 6.0
-        * _azimuthal_moment(gamma, geometry)
+        * _azimuthal_moment(gamma, geometry, cross_section)
     )
     correlation_per_m4 = amplitude * shape
     pair_per_m2 = correlation_per_m4 * r_m**2

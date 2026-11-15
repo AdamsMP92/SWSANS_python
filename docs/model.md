@@ -120,7 +120,59 @@ Here the convention is
 `q_y` vertical on the detector map.
 
 The code also evaluates the analytic azimuthal averages and the spherical
-particle expressions for `p(r)` and `c(r) = p(r) / r^2`.
+particle expressions for `p(r)` and `c(r) = p(r) / r^2` for the selected
+cross section.
+
+### Polarization-averaged spin-flip cross section
+
+The app also provides the polarization-independent average of the two
+spin-flip channels,
+
+```math
+\frac{d\Sigma_{\mathrm{sf}}}{d\Omega}
+\equiv \frac{1}{2}\left(
+\frac{d\Sigma^{+-}}{d\Omega}
++\frac{d\Sigma^{-+}}{d\Omega}\right).
+```
+
+The average removes the chiral term that changes sign between the two
+channels. In the perpendicular geometry, with the field and polarization
+axis along laboratory `z`, it is
+
+```math
+\frac{d\Sigma_{\mathrm{sf},\perp}}{d\Omega}=C(q)
+\left(\Gamma_{xx}+\Gamma_{yy}\cos^4\theta
++\Gamma_{zz}\sin^2\theta\cos^2\theta
+-2\Gamma_{yz}\sin\theta\cos^3\theta\right).
+```
+
+For the app's parallel convention `B || k_0 || z`, it is
+
+```math
+\frac{d\Sigma_{\mathrm{sf},\parallel}}{d\Omega}=C(q)
+\left(\Gamma_{xx}\sin^2\theta+\Gamma_{yy}\cos^2\theta
+-2\Gamma_{xy}\sin\theta\cos\theta\right).
+```
+
+The NuMagSANS reference writes the parallel expression for
+`B || k_0 || x`. Exchanging its `x` and `z` axes gives the formula above and
+keeps the SWSANS field direction fixed along `z`. Consequently,
+`Gamma_zz` is longitudinal and does not contribute to the parallel
+spin-flip average.
+
+The corresponding analytic azimuthal moments are
+
+```math
+\left\langle A_{\mathrm{sf},\perp}\right\rangle_\theta
+=\Gamma_{xx}+\frac{3}{8}\Gamma_{yy}+\frac{1}{8}\Gamma_{zz},
+\qquad
+\left\langle A_{\mathrm{sf},\parallel}\right\rangle_\theta
+=\frac{1}{2}(\Gamma_{xx}+\Gamma_{yy}).
+```
+
+Only the magnetic, polarization-independent spin-flip contribution is
+included. Nuclear spin-incoherent background, finite beam polarization,
+polarization efficiency, and leakage corrections are outside this model.
 
 ## Magnetostatic convention
 
@@ -134,4 +186,9 @@ macrospin/SANS calculation.
 
 M. P. Adams, E. Pratami Sinaga and A. Michels, *IUCrJ* **10**, 261–269
 (2023), [doi:10.1107/S205225252300180X](https://doi.org/10.1107/S205225252300180X).
+
+The polarized-SANS convention follows M. P. Adams and A. Michels,
+*J. Appl. Cryst.* **59**, 943–959 (2026),
+[doi:10.1107/S160057672600258X](https://doi.org/10.1107/S160057672600258X),
+especially equations (20) and (22).
 

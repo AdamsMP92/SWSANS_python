@@ -318,6 +318,24 @@ results = ui.div(
             class_="panel-heading sans-heading",
         ),
         ui.div(
+            ui.input_radio_buttons(
+                "cross_section",
+                "Magnetic cross section",
+                {
+                    "unpolarized": "Unpolarized",
+                    "spin_flip": "Spin-flip average",
+                },
+                selected="unpolarized",
+                inline=True,
+            ),
+            ui.tags.p(
+                "Choose the unpolarized magnetic signal or "
+                "½(Σ⁺⁻ + Σ⁻⁺), for which the chiral difference cancels.",
+                class_="cross-section-note",
+            ),
+            class_="cross-section-switch",
+        ),
+        ui.div(
             ui.input_select(
                 "sans_state",
                 "Calculated field point",
@@ -410,7 +428,8 @@ documentation_panel = ui.div(
         ui.tags.p(
             "The implementation follows the Stoner–Wohlfarth and "
             "Landau–Lifshitz model used in the associated IUCrJ article. "
-            "The equations below also define the conventions used by the code.",
+            "The polarized extension follows the NuMagSANS convention. "
+            "The equations below define the conventions used by the code.",
             class_="docs-lead",
         ),
         class_="docs-hero",
@@ -492,10 +511,41 @@ documentation_panel = ui.div(
             ),
             class_="docs-section",
         ),
+        ui.tags.section(
+            ui.tags.span("07", class_="docs-index"),
+            ui.h3("Polarization-averaged spin-flip SANS"),
+            _equation(
+                r"\frac{d\Sigma_{\mathrm{sf}}}{d\Omega}\equiv\frac{1}{2}"
+                r"\left(\frac{d\Sigma^{+-}}{d\Omega}+"
+                r"\frac{d\Sigma^{-+}}{d\Omega}\right)",
+                "Averaging the two spin-flip channels removes the chiral term.",
+            ),
+            _equation(
+                r"\frac{d\Sigma_{\mathrm{sf},\perp}}{d\Omega}=C(q)"
+                r"\left[\Gamma_{xx}+\Gamma_{yy}\cos^4\theta+"
+                r"\Gamma_{zz}\sin^2\theta\cos^2\theta-"
+                r"2\Gamma_{yz}\sin\theta\cos^3\theta\right]",
+                "Perpendicular geometry with B₀ and the polarization axis along z.",
+            ),
+            _equation(
+                r"\frac{d\Sigma_{\mathrm{sf},\parallel}}{d\Omega}=C(q)"
+                r"\left[\Gamma_{xx}\sin^2\theta+"
+                r"\Gamma_{yy}\cos^2\theta-"
+                r"2\Gamma_{xy}\sin\theta\cos\theta\right]",
+                "NuMagSANS uses B₀ ∥ k₀ ∥ x for this geometry; the expression "
+                "shown here is rotated into the app's fixed B₀ ∥ z convention.",
+            ),
+            ui.tags.p(
+                "Only the magnetic polarization-independent spin-flip term is "
+                "included. Nuclear spin-incoherent background, finite polarization, "
+                "and spin leakage are outside this model."
+            ),
+            class_="docs-section docs-section-wide",
+        ),
     ),
     ui.div(
         ui.tags.span("REFERENCE", class_="eyebrow"),
-        ui.h3("Associated publication"),
+        ui.h3("Model references"),
         ui.tags.p(
             "M. P. Adams, E. Pratami Sinaga and A. Michels, IUCrJ 10, 261–269 (2023)."
         ),
@@ -505,6 +555,18 @@ documentation_panel = ui.div(
             target="_blank",
             rel="noopener noreferrer",
             class_="source-link",
+        ),
+        ui.tags.p(
+            "Spin-flip convention: M. P. Adams and A. Michels, "
+            "J. Appl. Cryst. 59, 943–959 (2026).",
+            class_="source-detail",
+        ),
+        ui.tags.a(
+            "Open NuMagSANS reference",
+            href="https://doi.org/10.1107/S160057672600258X",
+            target="_blank",
+            rel="noopener noreferrer",
+            class_="source-link source-link-secondary",
         ),
         ui.tags.a(
             "View source code",
@@ -867,7 +929,13 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         config = _collect_sans_config()
         geometry = str(input.geometry())
         scale = str(input.reciprocal_scale())
-        x_axis, y_axis, intensity = sans_map(state.gamma, config, geometry)
+        cross_section = str(input.cross_section())
+        x_axis, y_axis, intensity = sans_map(
+            state.gamma,
+            config,
+            geometry,
+            cross_section,
+        )
         positive = intensity[intensity > 0.0]
         maximum = float(np.max(positive)) if positive.size else 1.0
         minimum = max(
@@ -892,6 +960,17 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             norm=norm,
             interpolation="bilinear",
         )
+        if not positive.size:
+            axis.text(
+                0.5,
+                0.5,
+                "Zero magnetic signal",
+                transform=axis.transAxes,
+                ha="center",
+                va="center",
+                color="white",
+                fontsize=10,
+            )
         if geometry == "perpendicular":
             axis.set_xlabel(r"$q_z$ [nm$^{-1}$]")
             axis.set_ylabel(r"$q_y$ [nm$^{-1}$]", labelpad=8)
@@ -900,14 +979,22 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             axis.set_xlabel(r"$q_x$ [nm$^{-1}$]")
             axis.set_ylabel(r"$q_y$ [nm$^{-1}$]", labelpad=8)
             title = r"$B\parallel k_0$"
+        channel_title = (
+            "Spin-flip average" if cross_section == "spin_flip" else "Unpolarized"
+        )
         axis.set_title(
-            f"Point {index + 1}/{result.field_t.size} · "
+            f"{channel_title} · point {index + 1}/{result.field_t.size} · "
             f"B = {state.field_t:+.4f} T · {title}",
             fontsize=10.5,
         )
         axis.set_aspect("equal")
         colorbar = figure.colorbar(image, ax=axis, fraction=0.047, pad=0.04)
-        colorbar.set_label(r"$d\Sigma_M/d\Omega$ [cm$^{-1}$]")
+        colorbar_label = (
+            r"$d\Sigma_{\mathrm{sf}}/d\Omega$ [cm$^{-1}$]"
+            if cross_section == "spin_flip"
+            else r"$d\Sigma_M/d\Omega$ [cm$^{-1}$]"
+        )
+        colorbar.set_label(colorbar_label)
         return figure
 
     @output
@@ -917,17 +1004,29 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
         config = _collect_sans_config()
         geometry = str(input.geometry())
         scale = str(input.reciprocal_scale())
+        cross_section = str(input.cross_section())
         spacing = "linear" if scale == "linear" else "log"
         q, intensity = sans_intensity_curve(
             state.gamma,
             config,
             geometry,
             spacing=spacing,
+            cross_section=cross_section,
         )
-        r, pair, correlation = pair_distance_curves(state.gamma, config, geometry)
+        r, pair, correlation = pair_distance_curves(
+            state.gamma,
+            config,
+            geometry,
+            cross_section,
+        )
         figure, axes = plt.subplots(3, 1, figsize=(6.2, 5.0))
         axes[0].plot(q, intensity, color="#6656d9", linewidth=2.0)
-        axes[0].set_ylabel(r"$I(q)$ [cm$^{-1}$]")
+        intensity_label = (
+            r"$I_{\mathrm{sf}}(q)$ [cm$^{-1}$]"
+            if cross_section == "spin_flip"
+            else r"$I_M(q)$ [cm$^{-1}$]"
+        )
+        axes[0].set_ylabel(intensity_label)
         axes[1].plot(r, pair, color="#17a7b5", linewidth=2.0)
         axes[1].set_ylabel(r"$p(r)$ [nm$^{-2}$]")
         axes[2].plot(r, correlation, color="#d99632", linewidth=2.0)
@@ -940,7 +1039,20 @@ def server(input: Inputs, output: Outputs, session: Session) -> None:
             axis.ticklabel_format(axis="y", style="sci", scilimits=(-2, 3))
         if scale == "log":
             axes[0].set_xscale("log")
-            axes[0].set_yscale("log")
+            if np.any(intensity > 0.0):
+                axes[0].set_yscale("log")
+            else:
+                axes[0].set_ylim(-0.05, 1.0)
+                axes[0].set_yticks([0.0])
+                axes[0].text(
+                    0.5,
+                    0.65,
+                    "Zero signal; logarithmic y-axis is undefined",
+                    transform=axes[0].transAxes,
+                    ha="center",
+                    color="#7a8398",
+                    fontsize=8,
+                )
         else:
             axes[0].set_xlim(0.0, config.q_max_per_nm)
         figure.tight_layout()
