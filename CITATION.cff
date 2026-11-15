@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+title: SWSANS
+message: If you use this software, please cite the associated publication.
+type: software
+authors:
+  - family-names: Adams
+    given-names: Michael Philipp
+repository-code: https://github.com/AdamsMP92/SWSANS_python
+url: https://adamsmp92.github.io/SWSANS_python/
+license: MIT
+version: 0.1.0
+date-released: 2026-11-15
+preferred-citation:
+  type: article
+  title: On the angular anisotropy of the randomly averaged magnetic neutron scattering cross section of nanoparticles
+  authors:
+    - family-names: Adams
+      given-names: Michael P.
+    - family-names: Sinaga
+      given-names: Evelyn Pratami
+    - family-names: Michels
+      given-names: Andreas
+  journal: IUCrJ
+  volume: 10
+  start: 261
+  end: 269
+  year: 2023
+  doi: 10.1107/S205225252300180X
+

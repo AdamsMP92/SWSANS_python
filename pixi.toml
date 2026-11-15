@@ -1,0 +1,36 @@
+[workspace]
+name = "swsans"
+version = "0.1.0"
+description = "Python development environment for SWSANS"
+authors = ["Michael P. Adams"]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "linux-64"]
+
+[dependencies]
+python = ">=3.12,<3.13"
+numpy = ">=2.1,<3"
+scipy = ">=1.14,<2"
+matplotlib = ">=3.9,<4"
+hatchling = ">=1.27,<2"
+pytest = ">=8.3,<9"
+pytest-cov = ">=6,<8"
+ruff = ">=0.9,<1"
+mypy = ">=1.14,<2"
+
+[pypi-dependencies]
+swsans = { path = ".", editable = true }
+shiny = ">=1.8,<2"
+shinylive = "==0.8.12"
+
+[tasks]
+test = "pytest"
+test-all = "pytest -m ''"
+test-cov = "pytest --cov=swsans --cov-report=term-missing"
+lint = "ruff check ."
+format = "ruff format ."
+format-check = "ruff format --check ."
+typecheck = "mypy"
+app = "shiny run --host 127.0.0.1 --port 8000 src/app.py"
+export-site = "shinylive export src site"
+check = { depends-on = ["format-check", "lint", "typecheck", "test"] }
+
