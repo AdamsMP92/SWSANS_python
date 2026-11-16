@@ -10,6 +10,11 @@ functions.
 [Open the browser app](https://adamsmp92.github.io/SWSANS_python/) ·
 [Read the associated publication](https://doi.org/10.1107/S205225252300180X)
 
+> [!NOTE]
+> Version 0.1.0 is the initial public beta. The scientific core, test suite,
+> and browser interface are usable, but the public API may still evolve before
+> a stable 1.0 release.
+
 ## Beta scope
 
 The current beta includes:
@@ -134,6 +139,18 @@ the generally non-universal identity `B = mu_0 (H + M)`.
 See [docs/model.md](docs/model.md) for the equations, coordinate conventions,
 and units. See [docs/migration-notes.md](docs/migration-notes.md) for documented
 differences from the MATLAB app.
+
+## Citation and releases
+
+Citation metadata for the current software version are provided in
+[`CITATION.cff`](CITATION.cff). GitHub exposes these metadata through its
+**Cite this repository** control. The release history and notable changes are
+documented in [`CHANGELOG.md`](CHANGELOG.md).
+
+Versioned source snapshots are intended to be archived through the Zenodo
+GitHub integration. Cite the DOI of the exact software version used in a
+reproducible analysis. A Zenodo DOI badge and DOI metadata will be added after
+the first archived GitHub release.
 
 ## GitHub Pages
 

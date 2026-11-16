@@ -1,15 +1,32 @@
 cff-version: 1.2.0
-title: SWSANS
-message: If you use this software, please cite the associated publication.
+message: "If you use this software in research, please cite the version you used."
 type: software
+title: "SWSANS"
+version: 0.1.0
+date-released: 2026-11-16
 authors:
   - family-names: Adams
-    given-names: Michael Philipp
-repository-code: https://github.com/AdamsMP92/SWSANS_python
-url: https://adamsmp92.github.io/SWSANS_python/
+    given-names: Michael P.
+    orcid: "https://orcid.org/0000-0001-9269-8087"
+abstract: >-
+  SWSANS is a tested Python implementation for simulating randomly oriented
+  Stoner-Wohlfarth particle ensembles with uniaxial, cubic, or additive aligned
+  uniaxial-cubic anisotropy. It connects Landau-Lifshitz field sweeps to
+  hysteresis, magnetization correlation tensors, and unpolarized and
+  polarization-averaged spin-flip magnetic small-angle neutron scattering
+  observables in perpendicular and parallel scattering geometries. A
+  browser-native interface performs the calculations locally.
+keywords:
+  - Stoner-Wohlfarth model
+  - magnetic hysteresis
+  - magnetic small-angle neutron scattering
+  - SANS
+  - Landau-Lifshitz dynamics
+  - magnetic nanoparticles
+  - scientific software
 license: MIT
-version: 0.1.0
-date-released: 2026-11-15
+repository-code: "https://github.com/AdamsMP92/SWSANS_python"
+url: "https://adamsmp92.github.io/SWSANS_python/"
 preferred-citation:
   type: article
   title: On the angular anisotropy of the randomly averaged magnetic neutron scattering cross section of nanoparticles
